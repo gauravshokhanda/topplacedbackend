@@ -23,6 +23,9 @@ connectDB();
 
 // Middleware
 app.use(express.json()); // For parsing JSON bodies
+app.get('/', (req, res) => {
+  res.send('Backend is working fine');
+});
 
 // API Routes
 app.use('/api/auth', authRoutes);
