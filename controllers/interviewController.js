@@ -1,5 +1,6 @@
 const Interview = require('../models/Interview');
-
+const moment = require("moment");
+const sendInterviewEmail = require('../utils/emailService');
 // ✅ Create (Schedule Interview)
 const scheduleInterview = async (req, res) => {
     try {
@@ -23,21 +24,36 @@ const scheduleInterview = async (req, res) => {
         const interview = new Interview({ name, email, whatsappNumber, selectDate, selectTime, yourField });
         await interview.save();
 
+        await sendInterviewEmail(email, name, selectDate, selectTime);
+
         res.status(201).json({ message: 'Interview scheduled successfully', interview });
     } catch (error) {
         res.status(500).json({ message: 'Server error', error: error.message });
     }
 };
 
-// ✅ Read All Interviews
 const getAllInterviews = async (req, res) => {
     try {
-        const interviews = await Interview.find();
-        res.status(200).json(interviews);
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 10;
+      const skip = (page - 1) * limit;
+  
+      const total = await Interview.countDocuments();
+      const interviews = await Interview.find()
+        .skip(skip)
+        .limit(limit)
+        .sort({ createdAt: -1 }); // Sort by newest first
+  
+      res.status(200).json({
+        data: interviews,
+        currentPage: page,
+        totalPages: Math.ceil(total / limit),
+        totalItems: total
+      });
     } catch (error) {
-        res.status(500).json({ message: 'Server error', error: error.message });
+      res.status(500).json({ message: 'Server error', error: error.message });
     }
-};
+  };
 
 // ✅ Read Single Interview by ID
 const getInterviewById = async (req, res) => {

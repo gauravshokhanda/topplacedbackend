@@ -10,10 +10,10 @@ const {
 
 const router = express.Router();
 
-router.post('/schedule', protect, scheduleInterview);  // Create
-router.get('/', protect, getAllInterviews);  // Read All
-router.get('/:id', protect, getInterviewById);  // Read One
-router.put('/:id', protect, updateInterview);  // Update
-router.delete('/:id', protect, deleteInterview);  // Delete
+router.post('/', scheduleInterview);  // Create
+router.get('/',  getAllInterviews);  // Read All
+router.get('/:id',  getInterviewById);  // Read One
+router.put('/:id',  updateInterview);  // Update
+router.delete('/:id',  deleteInterview);  // Delete
 
 module.exports = router;

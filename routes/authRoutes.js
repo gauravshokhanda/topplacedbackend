@@ -19,19 +19,17 @@ const s3 = new S3Client({
   },
 });
 
-// Configure multer to use S3 for storage
+
 const upload = multer({
   storage: multerS3({
     s3: s3,
-    bucket: process.env.AWS_S3_BUCKET, // e.g., "my-student-profile-bucket"
+    bucket: process.env.AWS_S3_BUCKET, 
     key: (req, file, cb) => {
-      // Generate a unique file name using the current timestamp and original file name
       const fileName = `${Date.now().toString()}-${file.originalname}`;
       cb(null, fileName);
     },
   }),
   fileFilter: (req, file, cb) => {
-    // Optional: Add file type validation
     if (file.fieldname === "image" && !file.mimetype.startsWith("image/")) {
       return cb(new Error("Only image files are allowed for the image field"));
     }
