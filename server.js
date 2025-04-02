@@ -8,12 +8,14 @@ const feedbackRoutes = require('./routes/feedbackRoutes');
 const mentorRoutes = require('./routes/mentorRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
 const resumeRoutes = require("./routes/resumeRoutes");
+const interviewRoutes = require('./routes/interviewRoutes.js');
 
 const app = express();
 
 // ✅ Enable CORS (Allow requests from frontend)
 app.use(cors({
-  origin: "http://localhost:3000", // Replace "*" with frontend domain in production
+  origin: "http://localhost:3000",
+  credentials: true,
   methods: "GET,POST,PUT,DELETE",
   allowedHeaders: "Content-Type,Authorization"
 }));
@@ -34,6 +36,8 @@ app.use('/api/feedback', feedbackRoutes);
 app.use('/api/mentors', mentorRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use("/api/resume", resumeRoutes);
+app.use('/api/interviews', interviewRoutes);
+
 
 // Error handling middleware
 app.use((err, req, res, next) => {
