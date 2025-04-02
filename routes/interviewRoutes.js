@@ -5,7 +5,9 @@ const {
     getAllInterviews,
     getInterviewById,
     updateInterview,
-    deleteInterview
+    deleteInterview,
+    getAvailableSlotsPerWeek,
+    getAvailableTimeSlotsForDate
 } = require('../controllers/interviewController');
 
 const router = express.Router();
@@ -15,5 +17,7 @@ router.get('/',  getAllInterviews);  // Read All
 router.get('/:id',  getInterviewById);  // Read One
 router.put('/:id',  updateInterview);  // Update
 router.delete('/:id',  deleteInterview);  // Delete
+router.get('/available/week', getAvailableSlotsPerWeek); // New: Get available slots for the week
+router.get('/available/date/:date', getAvailableTimeSlotsForDate); // New: Get available time slots for a specific date
 
 module.exports = router;
