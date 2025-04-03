@@ -1,93 +1,116 @@
 const Interview = require('../models/Interview');
+const AvailableSlot = require('../models/AvailableSlot');
 const moment = require('moment');
 const sendInterviewEmail = require('../utils/emailService');
-
-
-const ALL_TIME_SLOTS = [
-  '11:00', '11:45', '12:30', '15:30'
-];
-
 
 const getStartOfWeek = (date) => {
   const start = new Date(date);
   start.setDate(start.getDate() - start.getDay()); // Move to Sunday
+  start.setHours(0, 0, 0, 0); // Normalize to midnight
   return start;
-};
-
-// Helper function to generate week dates
-const generateWeekDates = (startDate) => {
-  const weekDates = [];
-  for (let i = 0; i < 7; i++) {
-    const date = new Date(startDate);
-    date.setDate(startDate.getDate() + i);
-    weekDates.push({
-      dateStr: date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }), // e.g., "02 Apr"
-      isoDate: date.toISOString().split('T')[0], // e.g., "2025-04-02"
-    });
-  }
-  return weekDates;
 };
 
 // ✅ Get Available Slots Per Week
 const getAvailableSlotsPerWeek = async (req, res) => {
-    try {
-      const { weekStart } = req.query; // Optional query param for week start date (e.g., "2025-04-02")
-      const referenceDate = weekStart ? new Date(weekStart) : new Date(); // Default to today
-      const startOfWeek = getStartOfWeek(referenceDate);
-      const weekDates = generateWeekDates(startOfWeek);
-  
-      // Fetch all interviews
-      const interviews = await Interview.find();
-  
-      // Process booked slots
-      const bookedSlots = interviews.reduce((acc, interview) => {
-        const interviewDate = new Date(interview.selectDate);
-        const dateStr = interviewDate.toLocaleDateString('en-GB', {
-          day: '2-digit',
-          month: 'short',
-        });
-        if (!acc[dateStr]) acc[dateStr] = [];
-        acc[dateStr].push(interview.selectTime);
-        return acc;
-      }, {});
-  
-      // Calculate available slots for each day of the week
-      const availableSlots = weekDates
-        .map((day) => {
-          const bookedTimes = bookedSlots[day.dateStr] || [];
-          const availableTimes = ALL_TIME_SLOTS.filter((time) => !bookedTimes.includes(time));
-          return {
-            date: day.dateStr, // e.g., "02 Apr"
-            isoDate: day.isoDate, // e.g., "2025-04-02"
-            availableTimes, // Array of available time slots
-            isAvailable: availableTimes.length > 0,
-          };
-        })
-        .filter((slot) => slot.isAvailable); // Filter out dates with no available slots
-  
-      res.status(200).json({
+  try {
+    const { weekStart } = req.query;
+    const referenceDate = weekStart ? new Date(weekStart) : new Date();
+    const startOfWeek = getStartOfWeek(referenceDate);
+    const endOfWeek = new Date(startOfWeek.getTime() + 6 * 24 * 60 * 60 * 1000);
+    endOfWeek.setHours(23, 59, 59, 999); // End of day for the last day
+
+    // console.log('Week Start:', startOfWeek.toISOString());
+    // console.log('Week End:', endOfWeek.toISOString());
+
+    // Fetch all available slots for the week
+    const availableSlots = await AvailableSlot.find({
+      date: {
+        $gte: startOfWeek,
+        $lte: endOfWeek,
+      },
+    });
+    // console.log('Available Slots from DB:', JSON.stringify(availableSlots, null, 2));
+
+    // If no slots are defined for the week, return an empty result
+    if (!availableSlots.length) {
+      return res.status(200).json({
         weekStart: startOfWeek.toISOString().split('T')[0],
-        slots: availableSlots,
+        slots: [],
       });
-    } catch (error) {
-      console.error('Error fetching available slots per week:', error);
-      res.status(500).json({ message: 'Server error', error: error.message });
     }
-  };
+
+    // Fetch all interviews for the week
+    const interviews = await Interview.find({
+      selectDate: {
+        $gte: startOfWeek,
+        $lte: endOfWeek,
+      },
+    });
+    // console.log('Interviews:', JSON.stringify(interviews, null, 2));
+
+    // Process booked slots
+    const bookedSlots = interviews.reduce((acc, interview) => {
+      const interviewDate = new Date(interview.selectDate);
+      const dateStr = interviewDate.toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'short',
+      });
+      if (!acc[dateStr]) acc[dateStr] = [];
+      acc[dateStr].push(interview.selectTime);
+      return acc;
+    }, {});
+    // console.log('Booked Slots:', bookedSlots);
+
+    // Calculate available slots only for dates that exist in AvailableSlot
+    const result = availableSlots.map((slot) => {
+      const dateStr = slot.date.toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'short',
+      });
+      const isoDate = slot.date.toISOString().split('T')[0];
+      const availableTimes = slot.timeSlots || [];
+      const bookedTimes = bookedSlots[dateStr] || [];
+      const remainingTimes = availableTimes.filter((time) => !bookedTimes.includes(time));
+      // console.log(`Date: ${dateStr}, Available Times: ${availableTimes}, Booked Times: ${bookedTimes}, Remaining Times: ${remainingTimes}`);
+
+      return {
+        date: dateStr,
+        isoDate: isoDate,
+        availableTimes: remainingTimes,
+        isAvailable: remainingTimes.length > 0,
+      };
+    }).filter((slot) => slot.isAvailable);
+
+    res.status(200).json({
+      weekStart: startOfWeek.toISOString().split('T')[0],
+      slots: result,
+    });
+  } catch (error) {
+    console.error('Error fetching available slots per week:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
 
 // ✅ Get Available Time Slots for a Specific Date
 const getAvailableTimeSlotsForDate = async (req, res) => {
   try {
-    const { date } = req.params; // Date in ISO format (e.g., "2025-04-02")
+    const { date } = req.params; // Date in ISO format (e.g., "2025-04-03")
     if (!date || !moment(date, 'YYYY-MM-DD', true).isValid()) {
       return res.status(400).json({ message: 'Invalid date format. Use YYYY-MM-DD' });
     }
 
-    const targetDate = new Date(date);
+    const targetDate = moment(date).startOf('day').toDate(); // Normalize to midnight
+    console.log('Target Date:', targetDate.toISOString());
+
     const dateStr = targetDate.toLocaleDateString('en-GB', {
       day: '2-digit',
       month: 'short',
     });
+
+    // Fetch available slots for the specific date
+    const availableSlot = await AvailableSlot.findOne({ date: targetDate });
+    console.log('Available Slot for Date:', JSON.stringify(availableSlot, null, 2));
+    const availableTimes = availableSlot ? availableSlot.timeSlots || [] : [];
 
     // Fetch all interviews for the specific date
     const interviews = await Interview.find({
@@ -96,16 +119,18 @@ const getAvailableTimeSlotsForDate = async (req, res) => {
         $lte: moment(date).endOf('day').toDate(),
       },
     });
+    console.log('Interviews for Date:', JSON.stringify(interviews, null, 2));
 
     // Process booked slots for the date
     const bookedTimes = interviews.map((interview) => interview.selectTime);
-    const availableTimes = ALL_TIME_SLOTS.filter((time) => !bookedTimes.includes(time));
+    const remainingTimes = availableTimes.filter((time) => !bookedTimes.includes(time));
+    console.log('Available Times:', availableTimes, 'Booked Times:', bookedTimes, 'Remaining Times:', remainingTimes);
 
     res.status(200).json({
-      date: dateStr, // e.g., "02 Apr"
-      isoDate: date, // e.g., "2025-04-02"
-      availableTimes, // Array of available time slots
-      isAvailable: availableTimes.length > 0,
+      date: dateStr,
+      isoDate: date,
+      availableTimes: remainingTimes,
+      isAvailable: remainingTimes.length > 0,
     });
   } catch (error) {
     console.error('Error fetching available time slots for date:', error);
@@ -113,7 +138,7 @@ const getAvailableTimeSlotsForDate = async (req, res) => {
   }
 };
 
-// Existing functions (unchanged)
+// Add validation in scheduleInterview to check against AvailableSlot
 const scheduleInterview = async (req, res) => {
   try {
     const { selectDate, selectTime, yourField, email, whatsappNumber, name } = req.body;
@@ -127,12 +152,19 @@ const scheduleInterview = async (req, res) => {
       return res.status(400).json({ message: 'Invalid time format. Use HH:mm (24-hour format)' });
     }
 
-    const existingInterview = await Interview.findOne({ selectDate, selectTime });
+    // Check if the selected date and time are available
+    const normalizedDate = moment(selectDate).startOf('day').toDate();
+    const availableSlot = await AvailableSlot.findOne({ date: normalizedDate });
+    if (!availableSlot || !availableSlot.timeSlots.includes(selectTime)) {
+      return res.status(400).json({ message: 'Selected time slot is not available' });
+    }
+
+    const existingInterview = await Interview.findOne({ selectDate: normalizedDate, selectTime });
     if (existingInterview) {
       return res.status(400).json({ message: 'Slot already booked, choose a different time' });
     }
 
-    const interview = new Interview({ name, email, whatsappNumber, selectDate, selectTime, yourField });
+    const interview = new Interview({ name, email, whatsappNumber, selectDate: normalizedDate, selectTime, yourField });
     await interview.save();
 
     await sendInterviewEmail(email, name, selectDate, selectTime);
@@ -193,7 +225,12 @@ const updateInterview = async (req, res) => {
         return res.status(400).json({ message: 'Invalid time format. Use HH:mm (24-hour format)' });
       }
 
-      const dateToCheck = selectDate ? new Date(selectDate) : interview.selectDate;
+      const dateToCheck = selectDate ? moment(selectDate).startOf('day').toDate() : interview.selectDate;
+      const availableSlot = await AvailableSlot.findOne({ date: dateToCheck });
+      if (!availableSlot || !availableSlot.timeSlots.includes(selectTime)) {
+        return res.status(400).json({ message: 'Selected time slot is not available' });
+      }
+
       const existingInterview = await Interview.findOne({
         selectDate: dateToCheck,
         selectTime: selectTime,
@@ -205,7 +242,7 @@ const updateInterview = async (req, res) => {
       }
     }
 
-    interview.selectDate = selectDate ? new Date(selectDate) : interview.selectDate;
+    interview.selectDate = selectDate ? moment(selectDate).startOf('day').toDate() : interview.selectDate;
     interview.selectTime = selectTime || interview.selectTime;
     interview.yourField = yourField || interview.yourField;
     interview.name = name || interview.name;

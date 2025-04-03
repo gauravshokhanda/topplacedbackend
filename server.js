@@ -9,6 +9,7 @@ const mentorRoutes = require('./routes/mentorRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
 const resumeRoutes = require("./routes/resumeRoutes");
 const interviewRoutes = require('./routes/interviewRoutes.js');
+const availableSlotRoutes = require('./routes/availableSlotRoutes');
 
 const app = express();
 
@@ -37,6 +38,7 @@ app.use('/api/mentors', mentorRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use("/api/resume", resumeRoutes);
 app.use('/api/interviews', interviewRoutes);
+app.use('/api/available-slots', availableSlotRoutes);
 
 
 // Error handling middleware
