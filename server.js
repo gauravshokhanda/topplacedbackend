@@ -14,7 +14,7 @@ const app = express();
 
 // ✅ Enable CORS (Allow requests from frontend)
 app.use(cors({
-  origin: "http://localhost:3000",
+  origin: ["http://localhost:3000","https://topplacedstagging.netlify.app"],
   credentials: true,
   methods: "GET,POST,PUT,DELETE",
   allowedHeaders: "Content-Type,Authorization"
