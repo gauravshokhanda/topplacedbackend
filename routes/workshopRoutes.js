@@ -11,8 +11,11 @@ router.put('/:workshopId', workshopController.updateWorkshop);
 // Delete a workshop (DELETE /api/workshops/:workshopId)
 router.delete('/:workshopId', workshopController.deleteWorkshop);
 
-// Register a participant in a workshop (POST /api/workshops/register)
+// Register a participant with payment initiation (POST /api/workshops/register)
 router.post('/register', workshopController.registerParticipant);
+
+// Verify payment and complete registration (POST /api/workshops/verify-registration)
+router.post('/verify-registration', workshopController.verifyRegistration);
 
 // Update a participant's details (PUT /api/workshops/:workshopId/participants/:participantId)
 router.put('/:workshopId/participants/:participantId', workshopController.updateParticipant);
