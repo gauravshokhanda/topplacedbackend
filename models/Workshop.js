@@ -5,61 +5,68 @@ const Schema = mongoose.Schema;
 const participantSchema = new Schema({
   fullName: {
     type: String,
-    required: true,
+    required: true
   },
   email: {
     type: String,
     required: true,
-    match: [/.+\@.+\..+/, 'Please enter a valid email address'],
+    match: [/.+\@.+\..+/, 'Please enter a valid email address']
   },
   whatsapp: {
     type: String,
-    required: true,
+    required: true
   },
   payment: {
     type: Number,
     required: true,
-    default: 19.49,
-  },
-  razorpay_payment_id: {
-    type: String, // Store Razorpay payment ID
-    required: false,
-  },
-  paymentStatus: {
-    type: Boolean, // Track payment completion
-    default: false,
-  },
+    default: 19.49
+  }
 });
 
 // Workshop schema
 const workshopSchema = new Schema({
   workshopName: {
     type: String,
-    required: true,
+    required: true
   },
   dateTime: {
     type: Date,
-    required: true,
+    required: true
   },
   meetingLink: {
     type: String,
-    required: true,
+    required: true
+  },
+  workshopLink: {
+    type: String,
+    unique: true
+  },
+  whatYoullLearn: {
+    type: [String], // Array of strings to store multiple learning points
+    required: true
   },
   price: {
     type: Number,
     required: true,
-    default: 19.49,
+    default: 19.49
   },
   totalRegistered: {
     type: Number,
-    default: 0,
+    default: 0
   },
-  participants: [participantSchema],
+  participants: [participantSchema]
 });
 
-// Pre-save hook to update totalRegistered
-workshopSchema.pre('save', function (next) {
+// Pre-save hook to update totalRegistered and generate workshop link
+workshopSchema.pre('save', function(next) {
   this.totalRegistered = this.participants.length;
+  
+  // Generate unique workshop link if not already set
+  if (!this.workshopLink) {
+    const uniqueId = this._id.toString();
+    this.workshopLink = `/workshops/${this.workshopName.toLowerCase().replace(/\s+/g, '-')}-${uniqueId.slice(-6)}`;
+  }
+  
   next();
 });
 
