@@ -98,23 +98,38 @@ exports.deleteWorkshop = async (req, res) => {
 // Register a participant in a workshop
 exports.registerParticipant = async (req, res) => {
   try {
-    const { workshopId, fullName, email, whatsapp, payment } = req.body;
+    const { workshopId, workshopLink, fullName, email, whatsapp, payment } = req.body;
 
-    // Validate workshopId
-    if (!mongoose.Types.ObjectId.isValid(workshopId)) {
-      return res.status(400).json({ message: 'Invalid workshop ID format' });
+    // Validate input
+    if (!fullName || !email || !whatsapp) {
+      return res.status(400).json({ message: 'Full name, email, and whatsapp are required' });
     }
 
-    const workshop = await Workshop.findById(workshopId);
+    // Find workshop by either workshopId or workshopLink
+    let workshop;
+    if (workshopId && mongoose.Types.ObjectId.isValid(workshopId)) {
+      workshop = await Workshop.findById(workshopId);
+    } else if (workshopLink) {
+      workshop = await Workshop.findOne({ workshopLink });
+    } else {
+      return res.status(400).json({ message: 'Workshop ID or link is required' });
+    }
+
     if (!workshop) {
       return res.status(404).json({ message: 'Workshop not found' });
+    }
+
+    // Check if email is already registered
+    const isRegistered = workshop.participants.some((p) => p.email === email);
+    if (isRegistered) {
+      return res.status(400).json({ message: 'This email is already registered for the workshop' });
     }
 
     const participant = {
       fullName,
       email,
       whatsapp,
-      payment: payment || workshop.price
+      payment: payment || workshop.price,
     };
 
     workshop.participants.push(participant);
