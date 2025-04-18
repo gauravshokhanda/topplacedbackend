@@ -1,64 +1,28 @@
+// ======================= ROUTES - routes/authRoutes.js =======================
 const express = require("express");
-const { registerUser, loginUser, updateStudentProfile } = require("../controllers/authController");
-const axios = require("axios");
-const jwt = require("jsonwebtoken");
-const UserLinked = require("../models/UserLinked");
-const { S3Client } = require('@aws-sdk/client-s3');
-const multer = require("multer");
-const multerS3 = require("multer-s3");
-require("dotenv").config();
-
 const router = express.Router();
+const jwt = require("jsonwebtoken");
+const axios = require("axios");
+const { uploadMultiple } = require("../utils/s3Upload");
+const { registerUser, loginUser, updateStudentProfile, getUserById } = require("../controllers/authController");
+const { protect, admin } = require("../middlewares/authMiddleware");
+const User = require("../models/User");
 
-// Configure AWS S3
-const s3 = new S3Client({
-  region: process.env.AWS_REGION,
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-  },
-});
-
-
-const upload = multer({
-  storage: multerS3({
-    s3: s3,
-    bucket: process.env.AWS_S3_BUCKET, 
-    key: (req, file, cb) => {
-      const fileName = `${Date.now().toString()}-${file.originalname}`;
-      cb(null, fileName);
-    },
-  }),
-  fileFilter: (req, file, cb) => {
-    if (file.fieldname === "image" && !file.mimetype.startsWith("image/")) {
-      return cb(new Error("Only image files are allowed for the image field"));
-    }
-    if (file.fieldname === "resume" && file.mimetype !== "application/pdf") {
-      return cb(new Error("Only PDF files are allowed for the resume field"));
-    }
-    cb(null, true);
-  },
-});
-
-// Middleware to protect routes
-const protect = async (req, res, next) => {
-  const token = req.headers.authorization?.split(" ")[1]; // Bearer <token>
-  if (!token) return res.status(401).json({ message: "No token provided" });
-
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded; // { userId, role }
-    next();
-  } catch (error) {
-    res.status(401).json({ message: "Invalid token" });
-  }
-};
-
-// Normal Authentication (Existing)
+// Auth routes
 router.post("/register", registerUser);
 router.post("/login", loginUser);
+router.get("/profile/:id", protect, getUserById);
+router.put(
+  "/profile",
+  protect,
+  uploadMultiple([
+    { name: "image", maxCount: 1 },
+    { name: "resume", maxCount: 1 },
+  ]),
+  updateStudentProfile
+);
 
-// LinkedIn Authentication (Existing)
+// LinkedIn auth
 const CLIENT_ID = process.env.LINKEDIN_CLIENT_ID;
 const CLIENT_SECRET = process.env.LINKEDIN_CLIENT_SECRET;
 const REDIRECT_URI = process.env.LINKEDIN_REDIRECT_URI;
@@ -70,7 +34,6 @@ router.get("/linkedin", (req, res) => {
 
 router.get("/linkedin/callback", async (req, res) => {
   const { code } = req.query;
-
   try {
     const tokenResponse = await axios.post("https://www.linkedin.com/oauth/v2/accessToken", null, {
       params: {
@@ -84,16 +47,13 @@ router.get("/linkedin/callback", async (req, res) => {
     });
 
     const accessToken = tokenResponse.data.access_token;
-
     const profileResponse = await axios.get("https://api.linkedin.com/v2/me", {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
 
     const emailResponse = await axios.get(
       "https://api.linkedin.com/v2/emailAddress?q=members&projection=(elements*(handle~))",
-      {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      }
+      { headers: { Authorization: `Bearer ${accessToken}` } }
     );
 
     const email = emailResponse.data.elements[0]["handle~"].emailAddress;
@@ -108,16 +68,12 @@ router.get("/linkedin/callback", async (req, res) => {
       await user.save();
     }
 
-    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: "7d" });
-
-    // Redirect back to frontend with token and user data
+    const token = jwt.sign({ userId: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: "7d" });
     res.redirect(`http://localhost:3000/linkedin/callback?token=${token}&user=${encodeURIComponent(JSON.stringify(user))}`);
-  } catch (error) {
+  } catch {
     res.status(500).json({ message: "Authentication failed." });
   }
 });
 
-// Route for updating student profile with file uploads to S3
-router.put("/profile", protect, upload.fields([{ name: "image" }, { name: "resume" }]), updateStudentProfile);
-
 module.exports = router;
+
