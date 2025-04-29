@@ -1,5 +1,13 @@
 const mongoose = require('mongoose');
 const Workshop = require('../models/Workshop');
+const crypto = require('crypto');
+
+const Razorpay = require("razorpay");
+const razorpay = new Razorpay({
+  key_id: process.env.RAZORPAY_KEY_ID,
+  key_secret: process.env.RAZORPAY_KEY_SECRET,
+});
+
 
 
 exports.createWorkshop = async (req, res) => {
@@ -13,8 +21,8 @@ exports.createWorkshop = async (req, res) => {
 
     // Validate whatYoullLearn is an array
     if (!Array.isArray(whatYoullLearn) || whatYoullLearn.length === 0) {
-      return res.status(400).json({ 
-        message: 'whatYoullLearn must be a non-empty array of learning points' 
+      return res.status(400).json({
+        message: 'whatYoullLearn must be a non-empty array of learning points'
       });
     }
 
@@ -28,8 +36,8 @@ exports.createWorkshop = async (req, res) => {
     });
 
     const savedWorkshop = await workshop.save();
-    res.status(201).json({ 
-      message: 'Workshop created successfully', 
+    res.status(201).json({
+      message: 'Workshop created successfully',
       workshop: {
         ...savedWorkshop.toObject(),
         workshopLink: savedWorkshop.workshopLink
@@ -65,9 +73,9 @@ exports.updateWorkshop = async (req, res) => {
     }
 
     const updatedWorkshop = await workshop.save();
-    res.status(200).json({ 
-      message: 'Workshop updated successfully', 
-      workshop: updatedWorkshop 
+    res.status(200).json({
+      message: 'Workshop updated successfully',
+      workshop: updatedWorkshop
     });
   } catch (error) {
     res.status(500).json({ message: 'Error updating workshop', error: error.message });
@@ -95,17 +103,16 @@ exports.deleteWorkshop = async (req, res) => {
   }
 };
 
-// Register a participant in a workshop
 exports.registerParticipant = async (req, res) => {
   try {
-    const { workshopId, workshopLink, fullName, email, whatsapp, payment } = req.body;
+    const { workshopId, workshopLink, fullName, email, whatsapp } = req.body;
 
     // Validate input
     if (!fullName || !email || !whatsapp) {
       return res.status(400).json({ message: 'Full name, email, and whatsapp are required' });
     }
 
-    // Find workshop by either workshopId or workshopLink
+    // Find workshop
     let workshop;
     if (workshopId && mongoose.Types.ObjectId.isValid(workshopId)) {
       workshop = await Workshop.findById(workshopId);
@@ -125,81 +132,141 @@ exports.registerParticipant = async (req, res) => {
       return res.status(400).json({ message: 'This email is already registered for the workshop' });
     }
 
-    const participant = {
-      fullName,
-      email,
-      whatsapp,
-      payment: payment || workshop.price,
-    };
+    // Create Razorpay order
+    const razorpayOrder = await razorpay.orders.create({
+      amount: Math.round(workshop.price * 100), // in paise
+      currency: "INR",
+      receipt: `rcpt_${Date.now()}`,
+    });
 
-    workshop.participants.push(participant);
-    const updatedWorkshop = await workshop.save();
-    res.status(200).json({ message: 'Participant registered successfully', workshop: updatedWorkshop });
+    // Return order info to frontend to trigger payment
+    res.status(200).json({
+      success: true,
+      order: razorpayOrder,
+      participantInfo: {
+        fullName,
+        email,
+        whatsapp,
+        payment: workshop.price,
+        workshopId: workshop._id,
+      },
+    });
   } catch (error) {
     res.status(500).json({ message: 'Error registering participant', error: error.message });
   }
 };
 
+
+exports.confirmRegistration = async (req, res) => {
+  try {
+    const {
+      fullName,
+      email,
+      whatsapp,
+      workshopId,
+      razorpay_order_id,
+      razorpay_payment_id,
+      razorpay_signature
+    } = req.body;
+
+    // Step 1: Verify Signature
+    const generatedSignature = crypto
+      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+      .update(`${razorpay_order_id}|${razorpay_payment_id}`)
+      .digest('hex');
+
+    if (generatedSignature !== razorpay_signature) {
+      return res.status(400).json({ message: 'Invalid payment signature' });
+    }
+
+    // Step 2: Save Participant
+    const workshop = await Workshop.findById(workshopId);
+    if (!workshop) return res.status(404).json({ message: 'Workshop not found' });
+
+    // Check duplicate
+    const alreadyRegistered = workshop.participants.some(p => p.email === email);
+    if (alreadyRegistered) {
+      return res.status(400).json({ message: 'Email already registered' });
+    }
+
+    const participant = {
+      fullName,
+      email,
+      whatsapp,
+      payment: workshop.price,
+    };
+
+    workshop.participants.push(participant);
+    await workshop.save();
+
+    res.status(200).json({ message: 'Registration successful and payment verified' });
+
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to confirm registration', error: error.message });
+  }
+};
+
+
 // Get a specific participant's details (Read)
 exports.getParticipant = async (req, res) => {
-    try {
-      const { workshopId, participantId } = req.params;
-  
-      if (!mongoose.Types.ObjectId.isValid(workshopId)) {
-        return res.status(400).json({ message: 'Invalid workshop ID format' });
-      }
-      if (!mongoose.Types.ObjectId.isValid(participantId)) {
-        return res.status(400).json({ message: 'Invalid participant ID format' });
-      }
-  
-      const workshop = await Workshop.findById(workshopId);
-      if (!workshop) {
-        return res.status(404).json({ message: 'Workshop not found' });
-      }
-  
-      const participant = workshop.participants.id(participantId);
-      if (!participant) {
-        return res.status(404).json({ message: 'Participant not found' });
-      }
-  
-      res.status(200).json(participant);
-    } catch (error) {
-      res.status(500).json({ message: 'Error fetching participant', error: error.message });
+  try {
+    const { workshopId, participantId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(workshopId)) {
+      return res.status(400).json({ message: 'Invalid workshop ID format' });
     }
-  };
-  
-  // Delete a participant from a workshop (Delete)
-  exports.deleteParticipant = async (req, res) => {
-    console.log(`DELETE /api/workshops/${req.params.workshopId}/participants/${req.params.participantId} called`);
-    try {
-      const { workshopId, participantId } = req.params;
-  
-      if (!mongoose.Types.ObjectId.isValid(workshopId)) {
-        return res.status(400).json({ message: 'Invalid workshop ID format' });
-      }
-      if (!mongoose.Types.ObjectId.isValid(participantId)) {
-        return res.status(400).json({ message: 'Invalid participant ID format' });
-      }
-  
-      const workshop = await Workshop.findById(workshopId);
-      if (!workshop) {
-        return res.status(404).json({ message: 'Workshop not found' });
-      }
-  
-      const participant = workshop.participants.id(participantId);
-      if (!participant) {
-        return res.status(404).json({ message: 'Participant not found' });
-      }
-  
-      // Remove the participant from the array
-      workshop.participants.pull(participantId);
-      const updatedWorkshop = await workshop.save();
-  
-      res.status(200).json({ message: 'Participant deleted successfully', workshop: updatedWorkshop });
-    } catch (error) {
-      res.status(500).json({ message: 'Error deleting participant', error: error.message });
+    if (!mongoose.Types.ObjectId.isValid(participantId)) {
+      return res.status(400).json({ message: 'Invalid participant ID format' });
     }
-  };
+
+    const workshop = await Workshop.findById(workshopId);
+    if (!workshop) {
+      return res.status(404).json({ message: 'Workshop not found' });
+    }
+
+    const participant = workshop.participants.id(participantId);
+    if (!participant) {
+      return res.status(404).json({ message: 'Participant not found' });
+    }
+
+    res.status(200).json(participant);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching participant', error: error.message });
+  }
+};
+
+// Delete a participant from a workshop (Delete)
+exports.deleteParticipant = async (req, res) => {
+  console.log(`DELETE /api/workshops/${req.params.workshopId}/participants/${req.params.participantId} called`);
+  try {
+    const { workshopId, participantId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(workshopId)) {
+      return res.status(400).json({ message: 'Invalid workshop ID format' });
+    }
+    if (!mongoose.Types.ObjectId.isValid(participantId)) {
+      return res.status(400).json({ message: 'Invalid participant ID format' });
+    }
+
+    const workshop = await Workshop.findById(workshopId);
+    if (!workshop) {
+      return res.status(404).json({ message: 'Workshop not found' });
+    }
+
+    const participant = workshop.participants.id(participantId);
+    if (!participant) {
+      return res.status(404).json({ message: 'Participant not found' });
+    }
+
+    // Remove the participant from the array
+    workshop.participants.pull(participantId);
+    const updatedWorkshop = await workshop.save();
+
+    res.status(200).json({ message: 'Participant deleted successfully', workshop: updatedWorkshop });
+  } catch (error) {
+    res.status(500).json({ message: 'Error deleting participant', error: error.message });
+  }
+};
 
 // Update a participant's details
 exports.updateParticipant = async (req, res) => {

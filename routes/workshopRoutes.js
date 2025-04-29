@@ -14,6 +14,9 @@ router.delete('/:workshopId', workshopController.deleteWorkshop);
 // Register a participant in a workshop (POST /api/workshops/register)
 router.post('/register', workshopController.registerParticipant);
 
+router.post('/confirm-registration', workshopController.confirmRegistration);
+
+
 // Update a participant's details (PUT /api/workshops/:workshopId/participants/:participantId)
 router.put('/:workshopId/participants/:participantId', workshopController.updateParticipant);
 
