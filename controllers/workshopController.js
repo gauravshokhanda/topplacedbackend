@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const Workshop = require('../models/Workshop');
 const crypto = require('crypto');
+const sendEmail = require("../utils/sendEmail");
 
 const Razorpay = require("razorpay");
 const razorpay = new Razorpay({
@@ -103,13 +104,21 @@ exports.deleteWorkshop = async (req, res) => {
   }
 };
 
+
+
 exports.registerParticipant = async (req, res) => {
   try {
-    const { workshopId, workshopLink, fullName, email, whatsapp } = req.body;
+    const { workshopId, workshopLink, fullName, email, whatsapp, payment } = req.body;
 
     // Validate input
-    if (!fullName || !email || !whatsapp) {
-      return res.status(400).json({ message: 'Full name, email, and whatsapp are required' });
+    if (!fullName || !email || !whatsapp || !payment) {
+      return res.status(400).json({ message: 'Full name, email, whatsapp, and payment are required' });
+    }
+
+    // Validate payment amount
+    const allowedPlans = [19, 49, 99];
+    if (!allowedPlans.includes(Number(payment))) {
+      return res.status(400).json({ message: 'Invalid payment amount selected' });
     }
 
     // Find workshop
@@ -134,12 +143,26 @@ exports.registerParticipant = async (req, res) => {
 
     // Create Razorpay order
     const razorpayOrder = await razorpay.orders.create({
-      amount: Math.round(workshop.price * 100), // in paise
+      amount: Math.round(payment * 100), // in paise
       currency: "INR",
       receipt: `rcpt_${Date.now()}`,
     });
 
-    // Return order info to frontend to trigger payment
+    // Optional: Send pre-confirmation email
+    await sendEmail({
+      to: email,
+      subject: "TopPlaced Workshop - Payment Initiated",
+      html: `
+        <h2>Hi ${fullName},</h2>
+        <p>Your registration for the <strong>${workshop.workshopName}</strong> has been initiated.</p>
+        <p>Plan Selected: ₹${payment}</p>
+        <p>As soon as your payment is confirmed, you'll receive another email with access details.</p>
+        <br/>
+        <p>Regards,<br/>TopPlaced Team</p>
+      `,
+    });
+
+    // Return order details to frontend
     res.status(200).json({
       success: true,
       order: razorpayOrder,
@@ -147,14 +170,17 @@ exports.registerParticipant = async (req, res) => {
         fullName,
         email,
         whatsapp,
-        payment: workshop.price,
+        payment,
         workshopId: workshop._id,
       },
     });
+
   } catch (error) {
     res.status(500).json({ message: 'Error registering participant', error: error.message });
   }
 };
+
+
 
 
 exports.confirmRegistration = async (req, res) => {
@@ -198,6 +224,21 @@ exports.confirmRegistration = async (req, res) => {
 
     workshop.participants.push(participant);
     await workshop.save();
+
+    // Step 3: Send confirmation email
+    await sendEmail({
+      to: email,
+      subject: "TopPlaced Workshop - Registration Confirmed",
+      html: `
+        <h2>Hello ${fullName},</h2>
+        <p>Your payment was successfully received and your registration for the <strong>${workshop.workshopName}</strong> is confirmed.</p>
+        <p><strong>Date & Time:</strong> ${new Date(workshop.dateTime).toLocaleString()}</p>
+        <p><strong>Meeting Link:</strong> <a href="${workshop.meetingLink}">${workshop.meetingLink}</a></p>
+        <br/>
+        <p>Looking forward to seeing you!</p>
+        <p>Regards,<br/>TopPlaced Team</p>
+      `,
+    });
 
     res.status(200).json({ message: 'Registration successful and payment verified' });
 
