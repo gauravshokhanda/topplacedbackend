@@ -16,9 +16,10 @@ const s3 = new S3Client({
 // Single file upload (e.g., only "image" or "resume")
 const uploadSingle = (fieldName, bucket = process.env.AWS_S3_BUCKET) => {
   return multer({
-    storage: multerS3({
+    storage: multerS3({ 
       s3,
       bucket,
+      
       key: (req, file, cb) => {
         const fileName = `${Date.now()}-${file.originalname}`;
         cb(null, fileName);
@@ -42,6 +43,7 @@ const uploadMultiple = (fields, bucket = process.env.AWS_S3_BUCKET) => {
     storage: multerS3({
       s3,
       bucket,
+      
       key: (req, file, cb) => {
         const fileName = `${Date.now()}-${file.originalname}`;
         cb(null, fileName);

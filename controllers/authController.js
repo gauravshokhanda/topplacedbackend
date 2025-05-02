@@ -22,6 +22,16 @@ const registerUser = async (req, res) => {
   }
 };
 
+const getCurrentUser = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).select('-password'); // omit password
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    res.status(200).json(user);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
 const loginUser = async (req, res) => {
   const { email, password } = req.body;
   try {
@@ -54,6 +64,7 @@ const getUserById = async (req, res) => {
 
 const updateStudentProfile = async (req, res) => {
   const updates = req.body;
+
   try {
     const userId = req.body._id || req.user._id;
     const user = await User.findById(userId);
@@ -64,17 +75,38 @@ const updateStudentProfile = async (req, res) => {
     }
 
     user.profile = user.profile || {};
+    const existing = user.profile.studentDetails || {};
+
     user.profile.studentDetails = {
-      ...user.profile.studentDetails,
-      ...updates,
-      image: req.files?.image ? req.files.image[0].location : user.profile.studentDetails.image,
-      resume: req.files?.resume ? req.files.resume[0].location : user.profile.studentDetails.resume,
-      technicalSkills: updates.technicalSkills ? JSON.parse(updates.technicalSkills) : user.profile.studentDetails.technicalSkills,
-      softSkills: updates.softSkills ? JSON.parse(updates.softSkills) : user.profile.studentDetails.softSkills,
-      certifications: updates.certifications ? JSON.parse(updates.certifications) : user.profile.studentDetails.certifications,
+      ...existing,
+      name: updates.name || existing.name,
+      email: updates.email || existing.email,
+      bio: updates.bio || existing.bio,
+      location: updates.location || existing.location,
+      education: updates.education || existing.education,
+      experience: updates.experience || existing.experience,
+      company: updates.company || existing.company,
+      position: updates.position || existing.position,
+      phone: updates.phone || existing.phone,
+      whatsapp: updates.whatsapp || existing.whatsapp,
+      linkedinUrl: updates.linkedinUrl || existing.linkedinUrl,
+      githubUrl: updates.githubUrl || existing.githubUrl,
+      lookingFor: updates.lookingFor || existing.lookingFor,
+      totalExperience: updates.totalExperience || existing.totalExperience,
+      academicPerformance: updates.academicPerformance || existing.academicPerformance,
+      portfolio: updates.portfolio || existing.portfolio,
+      working: updates.working !== undefined ? updates.working : existing.working,
+      feedback: updates.feedback || existing.feedback,
+      rating: updates.rating || existing.rating,
+      image: req.files?.image ? req.files.image[0].location : existing.image,
+      resume: req.files?.resume ? req.files.resume[0].location : existing.resume,
+      technicalSkills: updates.technicalSkills ? JSON.parse(updates.technicalSkills) : existing.technicalSkills,
+      softSkills: updates.softSkills ? JSON.parse(updates.softSkills) : existing.softSkills,
+      certifications: updates.certifications ? JSON.parse(updates.certifications) : existing.certifications,
     };
 
     const updatedUser = await user.save();
+
     res.status(200).json({
       _id: updatedUser._id,
       name: updatedUser.name,
@@ -88,9 +120,11 @@ const updateStudentProfile = async (req, res) => {
   }
 };
 
+
 module.exports = {
   registerUser,
   loginUser,
   getUserById,
   updateStudentProfile,
+  getCurrentUser
 };
