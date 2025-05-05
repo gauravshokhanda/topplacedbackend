@@ -1,5 +1,3 @@
-
-// ======================= CONTROLLER - controllers/authController.js =======================
 const User = require("../models/User");
 const { generateToken } = require("../config/jwt");
 
@@ -81,7 +79,7 @@ const updateStudentProfile = async (req, res) => {
       ...existing,
       name: updates.name || existing.name,
       email: updates.email || existing.email,
-      bio: updates.bio || existing.bio,
+      bio: updates.bio !== undefined ? updates.bio : existing.bio,
       location: updates.location || existing.location,
       education: updates.education || existing.education,
       experience: updates.experience || existing.experience,

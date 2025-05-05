@@ -1,6 +1,3 @@
-
-// models/User.js
-
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
@@ -17,7 +14,8 @@ const userSchema = mongoose.Schema({
       experience: { type: String },
       company: { type: String },
       position: { type: String },           // New
-      phone: { type: String },              // New
+      phone: { type: String },   
+      bio:{type:String},           // New
       whatsapp: { type: String },           // New
       education: { type: String },
       linkedinUrl: { type: String },        // New
