@@ -24,7 +24,8 @@ jobs:
       run: |
         rsync -avz --delete -e "ssh -p ${{ secrets.CPANEL_PORT }}" ./ ${{ secrets.CPANEL_USERNAME }}@${{ secrets.CPANEL_HOST }}:public_html/${{ secrets.CPANEL_APP_PATH }}/
  
-    - name: Restart Node.js App
+    - name: Restart Node.js Appx
+    
       run: |
         ssh -p ${{ secrets.CPANEL_PORT }} ${{ secrets.CPANEL_USERNAME }}@${{ secrets.CPANEL_HOST }} << 'EOF'
           source ~/nodevenv/${{ secrets.CPANEL_APP_PATH }}/18/bin/activate
