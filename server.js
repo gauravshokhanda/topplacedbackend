@@ -30,7 +30,7 @@ connectDB();
 // Middleware
 app.use(express.json()); // For parsing JSON bodies
 app.get('/', (req, res) => {
-  res.send('Backend is working fine on hostmycode');
+  res.send('Backend is working fine on hostmycode ');
 });
 
 // API Routes
