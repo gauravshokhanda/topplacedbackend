@@ -168,17 +168,28 @@ const deleteInterview = async (req, res) => {
 
 const getMyInterviews = async (req, res) => {
   try {
-    const interviews = await Interview.find({ userId: req.user._id }).sort({ createdAt: -1 });
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const total = await Interview.countDocuments({ userId: req.user._id });
+    const interviews = await Interview.find({ userId: req.user._id })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
 
     res.status(200).json({
-      total: interviews.length,
       data: interviews,
+      totalItems: total,
+      totalPages: Math.ceil(total / limit),
+      currentPage: page,
     });
   } catch (error) {
     console.error('Error fetching user interviews:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
+
 
 // ✅ Get Weekly Slots
 const getAvailableSlotsPerWeek = async (req, res) => {

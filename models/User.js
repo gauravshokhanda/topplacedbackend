@@ -5,7 +5,7 @@ const userSchema = mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
-  role: { type: String, enum: ['Student', 'Mentor'], required: true },
+  role: { type: String, enum: ['Student', 'Teacher'], required: true },
   linkedinId: { type: String },
   profile: {
     studentDetails: {

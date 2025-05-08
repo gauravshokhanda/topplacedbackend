@@ -1,10 +1,18 @@
-// ======================= ROUTES - routes/authRoutes.js =======================
 const express = require("express");
 const router = express.Router();
 const jwt = require("jsonwebtoken");
 const axios = require("axios");
 const { uploadMultiple } = require("../utils/s3Upload");
-const { registerUser, loginUser, updateStudentProfile, getUserById,getCurrentUser } = require("../controllers/authController");
+const {
+  registerUser,
+  loginUser,
+  updateStudentProfile,
+  getUserById,
+  getCurrentUser,
+  getAllStudents,
+  updateStudentById,
+  deleteUserById
+} = require("../controllers/authController");
 const { protect, admin } = require("../middlewares/authMiddleware");
 const User = require("../models/User");
 
@@ -13,6 +21,9 @@ router.post("/register", registerUser);
 router.post("/login", loginUser);
 router.get("/profile/:id", protect, getUserById);
 router.get("/me", protect, getCurrentUser);
+router.get('/students', getAllStudents);
+router.put("/users/:id", protect, admin, updateStudentById);
+router.delete("/users/:id", protect, admin, deleteUserById);
 router.put(
   "/profile",
   protect,

@@ -60,6 +60,16 @@ const getUserById = async (req, res) => {
   }
 };
 
+const getAllStudents = async (req, res) => {
+  try {
+    const students = await User.find({ role: 'Student' }).select('-password');
+    res.status(200).json(students);
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+
 const updateStudentProfile = async (req, res) => {
   const updates = req.body;
 
@@ -118,11 +128,58 @@ const updateStudentProfile = async (req, res) => {
   }
 };
 
+const updateStudentById = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user || user.role !== 'Student') {
+      return res.status(404).json({ message: 'Student not found' });
+    }
+
+    // Allow only basic fields to update here
+    user.name = req.body.name || user.name;
+    user.email = req.body.email || user.email;
+
+    // Update password if provided
+    if (req.body.password) {
+      user.password = req.body.password;
+    }
+
+    const updatedUser = await user.save();
+
+    res.status(200).json({
+      _id: updatedUser._id,
+      name: updatedUser.name,
+      email: updatedUser.email,
+      role: updatedUser.role,
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+const deleteUserById = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    await user.remove();
+
+    res.status(200).json({ message: 'User deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+
+
 
 module.exports = {
   registerUser,
   loginUser,
   getUserById,
   updateStudentProfile,
-  getCurrentUser
+  getCurrentUser,
+  getAllStudents,
+  updateStudentById,
+  deleteUserById
 };
