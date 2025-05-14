@@ -1,25 +1,26 @@
-// models/JobCard.js
-const mongoose = require("mongoose");
+const mongoose = require('mongoose');
 
-const jobCardSchema = mongoose.Schema(
-  {
-    student: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
-    rating: Number,
-    feedback: String,
-    academicPerformance: Number,
-    attendance: Number,
-    communication: Number,
-    teamwork: Number,
-    technicalSkills: Number,
-    totalProjects: Number,
-    progress: Number,
-    mentor: String,
+const jobCardSchema = new mongoose.Schema({
+  student: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true,
   },
-  { timestamps: true }
-);
+  jobRole: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'JobRole',
+    required: true,
+  },
+  filledFields: [
+    {
+      label: { type: String },
+      value: { type: mongoose.Schema.Types.Mixed }, // can be string, number, boolean
+    },
+  ],
+  assignedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User', // the admin who created it
+  },
+}, { timestamps: true });
 
-module.exports = mongoose.model("JobCard", jobCardSchema);
+module.exports = mongoose.model('JobCard', jobCardSchema);

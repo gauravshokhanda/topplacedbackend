@@ -22,8 +22,8 @@ router.post("/login", loginUser);
 router.get("/profile/:id", protect, getUserById);
 router.get("/me", protect, getCurrentUser);
 router.get('/students', getAllStudents);
-router.put("/users/:id", protect, admin, updateStudentById);
-router.delete("/users/:id", protect, admin, deleteUserById);
+router.put("/users/:id",  updateStudentById);
+router.delete("/users/:id",  deleteUserById);
 router.put(
   "/profile",
   protect,

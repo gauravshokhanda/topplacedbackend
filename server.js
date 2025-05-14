@@ -12,7 +12,10 @@ const interviewRoutes = require('./routes/interviewRoutes.js');
 const availableSlotRoutes = require('./routes/availableSlotRoutes');
 const workshopRoutes = require('./routes/workshopRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
-const jobCardRoutes = require("./routes/jobCardRoutes");
+const jobRoleRoutes = require('./routes/jobRoleRoutes');
+const jobRoleTemplateRoutes = require('./routes/jobRoleTemplateRoutes');
+const jobCardRoutes = require('./routes/jobCardRoute.js');
+
 
 const app = express();
 
@@ -43,7 +46,10 @@ app.use('/api/interviews', interviewRoutes);
 app.use('/api/available-slots', availableSlotRoutes);
 app.use('/api/workshops', workshopRoutes); 
 app.use('/api/payment', paymentRoutes);
-app.use("/api/jobcards", jobCardRoutes);
+
+app.use('/api/job-roles', jobRoleRoutes);
+app.use('/api/job-role-templates', jobRoleTemplateRoutes);
+app.use('/api/job-cards', jobCardRoutes);
 
 
 // Error handling middleware
