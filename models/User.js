@@ -5,17 +5,22 @@ const userSchema = mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
-  role: { type: String, enum: ['Student', 'Teacher'], required: true },
+  role: { type: String, enum: ['Student', 'Teacher', 'Admin'], required: true },
   linkedinId: { type: String },
   profile: {
     studentDetails: {
-      image: { type: String },              
-      resume: { type: String },             
+      image: { type: String },
+      resume: { type: String },
+      position: { type: String },
+      jobRoleId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'JobRole',
+      },
       experience: { type: String },
       company: { type: String },
       position: { type: String },           // New
-      phone: { type: String },   
-      bio:{type:String},           // New
+      phone: { type: String },
+      bio: { type: String },           // New
       whatsapp: { type: String },           // New
       education: { type: String },
       linkedinUrl: { type: String },        // New

@@ -9,10 +9,11 @@ const {
 } = require('../controllers/jobCardController');
 const { protect, admin } = require('../middlewares/authMiddleware');
 
-router.post('/:studentId',  createJobCard);      // Create job card for a student
-router.get('/:studentId',  getJobCard);                 // Get job card by student ID
-router.put('/:studentId',  updateJobCard);       // Update job card for a student
-router.delete('/:studentId',  deleteJobCard);    // Delete job card for a student
-router.get('/',  getAllJobCards);                // List all job cards
+router.post('/:studentId',  createJobCard);
+
+router.get('/:studentId',  getJobCard);
+router.put('/:id', updateJobCard);      
+router.delete('/:studentId',  deleteJobCard);    
+router.get('/',  getAllJobCards);                
 
 module.exports = router;

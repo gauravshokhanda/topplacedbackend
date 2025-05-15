@@ -15,6 +15,7 @@ const paymentRoutes = require('./routes/paymentRoutes');
 const jobRoleRoutes = require('./routes/jobRoleRoutes');
 const jobRoleTemplateRoutes = require('./routes/jobRoleTemplateRoutes');
 const jobCardRoutes = require('./routes/jobCardRoute.js');
+const studentManagementRoutes = require('./routes/studentManagementRoutes.js');
 
 
 const app = express();
@@ -50,6 +51,7 @@ app.use('/api/payment', paymentRoutes);
 app.use('/api/job-roles', jobRoleRoutes);
 app.use('/api/job-role-templates', jobRoleTemplateRoutes);
 app.use('/api/job-cards', jobCardRoutes);
+app.use('/api/students', studentManagementRoutes);
 
 
 // Error handling middleware
