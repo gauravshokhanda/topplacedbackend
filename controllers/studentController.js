@@ -19,7 +19,7 @@ exports.assignJobRoleToStudent = async (req, res) => {
       return res.status(404).json({ message: 'Job role not found' });
     }
 
-    student.profile.studentDetails.position = jobRole.name; // optional
+    student.profile.studentDetails.position = jobRole.name; 
     student.profile.studentDetails.jobRoleId = jobRole._id;
 
     await student.save();
