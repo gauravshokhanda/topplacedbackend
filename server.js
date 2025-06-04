@@ -19,19 +19,26 @@ const studentManagementRoutes = require("./routes/studentManagementRoutes.js");
 
 const app = express();
 
-// ✅ Enable CORS (Allow requests from frontend)
+const allowedOrigins = [
+  "http://localhost:3000",
+  "http://localhost:3001",
+  "https://topplacedstagging.netlify.app",
+  "https://testtopplaced.netlify.app",
+  "https://www.topplaced.com",
+];
+
 app.use(
   cors({
-    origin: [
-      "http://localhost:3000",
-      "https://topplacedstagging.netlify.app",
-      "https://www.topplaced.com",
-      "http://localhost:3001",
-      "https://testtopplaced.netlify.app",
-    ],
+    origin: function (origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     credentials: true,
-    methods: "GET,POST,PUT,DELETE",
-    allowedHeaders: "Content-Type,Authorization",
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
 
@@ -40,7 +47,6 @@ connectDB();
 
 // Middleware
 app.use(express.json()); // For parsing JSON bodies
-app.options("*", cors());
 
 app.get("/", (req, res) => {
   res.send("Backend is working fine on hostmycode ");
