@@ -26,7 +26,7 @@ const participantSchema = new Schema({
     required: false,
   },
   description: {
-    type: String, // ✅ newly added
+    type: String, 
     required: false,
   },
 });
@@ -65,6 +65,10 @@ const workshopSchema = new Schema({
   totalRegistered: {
     type: Number,
     default: 0,
+  },
+  description: {
+    type: String, // 🔥 
+    required: true,
   },
   participants: [participantSchema],
 });
