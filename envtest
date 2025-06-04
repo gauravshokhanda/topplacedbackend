@@ -1,0 +1,31 @@
+PORT=5100
+# MONGO_URI=mongodb+srv://gaurav:wjzIhItu2TZp27mQ@cluster0.mongodb.net/Topplaced?retryWrites=true&w=majority
+MONGO_URI=mongodb+srv://gaurav:wjzIhItu2TZp27mQ@topplaced.dvhx7.mongodb.net/
+
+JWT_SECRET=your_jwt_secret
+
+GOOGLE_CLIENT_ID=your_google_client_idcls
+
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+
+LINKEDIN_CLIENT_ID=862hks3hs2ip0r
+
+LINKEDIN_CLIENT_SECRET=WPL_AP1.kpX8ufe61OJrdw99.WN5pLA==
+
+LINKEDIN_REDIRECT_URI=http://localhost:5100/api/auth/linkedin/callback
+
+AWS_ACCESS_KEY_ID=AKIAZOZQFVKP73BM4YL4
+
+AWS_SECRET_ACCESS_KEY=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
+
+AWS_REGION=ap-south-1
+
+AWS_S3_BUCKET=topplaced
+
+EMAIL_USER=topplaced18@gmail.com
+EMAIL_PASS=ktpv dyul enui jsgc
+
+
+RAZORPAY_KEY_ID=rzp_live_ZIlbMaeIfDVoZt
+RAZORPAY_KEY_SECRET=f2nLbkdrWfSZnspPmyvPbOiL
+
