@@ -21,7 +21,7 @@ exports.createWorkshop = async (req, res) => {
     } = req.body;
 
     // Validate required fields
-    if (!workshopName || !dateTime || !meetingLink || !whatYoullLearn) {
+    if (!workshopName || !dateTime || !meetingLink || !whatYoullLearn || !description) {
       return res
         .status(400)
         .json({ message: "All required fields must be provided" });
@@ -53,8 +53,10 @@ exports.createWorkshop = async (req, res) => {
       workshop: {
         ...savedWorkshop.toObject(),
         workshopLink: savedWorkshop.workshopLink,
+        description: savedWorkshop.description, // 👈 add this line
       },
     });
+
   } catch (error) {
     res
       .status(500)
@@ -269,15 +271,13 @@ exports.confirmRegistration = async (req, res) => {
       subject: "TopPlaced Workshop - Registration Confirmed",
       html: `
         <h2>Hello ${fullName},</h2>
-        <p>Your payment was successfully received and your registration for the <strong>${
-          workshop.workshopName
+        <p>Your payment was successfully received and your registration for the <strong>${workshop.workshopName
         }</strong> is confirmed.</p>
         <p><strong>Date & Time:</strong> ${new Date(
           workshop.dateTime
         ).toLocaleString()}</p>
-        <p><strong>Meeting Link:</strong> <a href="${workshop.meetingLink}">${
-        workshop.meetingLink
-      }</a></p>
+        <p><strong>Meeting Link:</strong> <a href="${workshop.meetingLink}">${workshop.meetingLink
+        }</a></p>
         <br/>
         <p>Looking forward to seeing you!</p>
         <p>Regards,<br/>TopPlaced Team</p>
