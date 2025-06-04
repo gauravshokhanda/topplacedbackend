@@ -27,6 +27,7 @@ app.use(
       "https://topplacedstagging.netlify.app",
       "https://www.topplaced.com",
       "http://localhost:3001",
+      "https://testtopplaced.netlify.app",
     ],
     credentials: true,
     methods: "GET,POST,PUT,DELETE",
